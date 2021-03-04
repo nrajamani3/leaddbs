@@ -58,7 +58,7 @@ function varargout =  ea_runslicer(options, task)
             return;
         end
     end
-    
+
     slicer_mrml = 'none';
 
     if (isempty(options.uipatdirs))
@@ -129,6 +129,7 @@ function varargout =  ea_runslicer(options, task)
 
         case 4 % show electrode localization
             if exist([patient_path,filesep,'ea_reconstruction.mat'],'file')
+                options.native = 0; % Export fiducial only in MNI space
                 ea_exportfiducials(options, 'ElectrodeFiducials.fcsv');
             else
                 warning('Please run reconstruction first...');
@@ -136,7 +137,7 @@ function varargout =  ea_runslicer(options, task)
             end
             slicer_mrml = 'Slicer_electrodes.mrml';
             [nfiles, filepaths, filenames] = GetNormalizedFiles(options);
-            
+
         case 5 % return slicer path
             varargout = {SLICER};
             return
@@ -173,13 +174,14 @@ function varargout =  ea_runslicer(options, task)
     fprintf(fid, ['slicer.util.loadScene("', strrep(scene_path, '\', '/'), '")\r\n']);
     fclose(fid);
     disp('Loading up 3D Slicer...');
+    ea_libs_helper('', 'unset');
     if (task > 0)
         system(['"', SLICER, '" --no-splash --python-script "', script_path, '" &']);
         % the trailing '&' returns control back to matlab without waiting for slicer to close
     else
         system(['"', SLICER, '" --no-splash --python-script "', script_path, '"']);
     end
-    
+
     % ea_delete(script_path);
     % Please do not delete the above script. Slicer runs asynchronously in
     % the background. A race condition will develop and the script will be
@@ -197,6 +199,7 @@ function WriteReconstructionFiducialFile(options)
     counter = 0;
     if exist([options.root,options.patientname,filesep,'ea_reconstruction.mat'],'file')
         options.native = 1;
+        options.loadnativereco = 1; % Load native reco intead of scrf
         [~,~,markers] = ea_load_reconstruction(options);
         for side = options.sides
             h = markers(side).head;
@@ -256,6 +259,7 @@ function [nfiles, filepaths, filenames] = GetNormalizedFiles(options)
         end
     end
 end
+
 
 function txt = GetFileXML(index, filepath, name)
 

@@ -1,4 +1,4 @@
-function [h,R,p,g]=ea_corrplot(X,Y,labels,corrtype,group1,group2,pperm,colors)
+function [h,R,p,g]=ea_corrplot(X,Y,labels,corrtype,group1,group2,pperm,colors,markers)
 % Wrapper for gramm to produce a simple correlation plot.
 % Group1 denotes colors, Group2 Markers.
 % Can also specify custom colors
@@ -72,6 +72,16 @@ else
     colorOptions = {'map', map, 'n_color', size(map,1), 'n_lightness', 1};
 end
 
+if exist('markers', 'var') && ~isempty(markers)
+    if ~isempty(group2)
+        if numel(markers) < numel(unique(group2.idx))
+            error('Number of custom markers is less than number of categories!');
+        end
+    end
+else
+    markers = {'o' 's' 'd' '^' 'v' '>' '<' 'p' 'h' '*' '+' 'x'};
+end
+
 switch corrtype
     case {'permutation_spearman','permutation'}
         for tries=1:3
@@ -84,10 +94,10 @@ switch corrtype
         end
     case 'permutation_pearson'
         for tries=1:3
-
             try
                 [R,p]=ea_permcorr(X,Y,'pearson');
             end
+
             if exist('R','var')
                 break
             end
@@ -100,9 +110,11 @@ end
 g=gramm('x',X,'y',Y);
 if isempty(group1) && isempty(group2)
     g.geom_point();
+    g.set_color_options(colorOptions{:});
 else
     g.set_color_options('chroma',0,'lightness',30);
 end
+g.set_point_options('markers', markers, 'base_size', 7);
 g.stat_glm();
 
 pv=p;
@@ -112,7 +124,18 @@ if exist('pperm','var') && ~isempty(pperm)
     pstr='p(perm)';
 end
 
-g.set_title([labels{1},' [R = ',sprintf('%.2f',R),'; ',pstr,' = ',sprintf('%.3f',pv),']'],'FontSize',20);
+if pv >= 0.001 % Show p = 0.XXX when p > 0.001
+    pstr = [pstr, ' = ', sprintf('%.3f',pv)];
+else
+    % pstr = [pstr, ' = ', sprintf('%.1e',pv)]; % Show p = X.Xe-X
+    signCheck=zeros(1,17);
+    for i=1:length(signCheck)
+        signCheck(i)=eval(['pv<1e-',num2str(i),';']);
+    end
+    pstr = [pstr, ' < 1e-', num2str(find(diff(signCheck),1))]; % Show p < 1e-X
+end
+
+g.set_title([labels{1}, ' [R = ', sprintf('%.2f',R), '; ', pstr, ']'], 'FontSize', 20);
 g.set_names('x',labels{2},'y',labels{3});
 g.set_text_options('base_size',22);
 g.no_legend();
