@@ -29,7 +29,7 @@ if isfield(M,'clinical')
                 disp("Storing modified clinical scores into patient folders")
             end
         elseif new_var == 1 %ading a new variable
-            score_type = 'NEW';
+            score_type = 'NewVar';
             postop_flag = 'Custom';
             if contains(matname,' ')
                 matname = strrep(matname,' ','');
